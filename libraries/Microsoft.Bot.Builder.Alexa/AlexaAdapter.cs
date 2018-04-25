@@ -128,7 +128,7 @@ namespace Microsoft.Bot.Builder.Alexa
                 Version = "1.0",
                 Response = new AlexaResponse()
                 {
-                    ShouldEndSession = false
+                    ShouldEndSession = true
                 }
             };
 
@@ -188,6 +188,12 @@ namespace Microsoft.Bot.Builder.Alexa
                         };
                         break;
                 }
+            }
+
+            if (activity.InputHint != null && activity.InputHint == InputHints.ExpectingInput ||
+                activity.InputHint == InputHints.AcceptingInput)
+            {
+                response.Response.ShouldEndSession = false;
             }
 
             if (activity.InputHint != null && activity.InputHint == InputHints.IgnoringInput)

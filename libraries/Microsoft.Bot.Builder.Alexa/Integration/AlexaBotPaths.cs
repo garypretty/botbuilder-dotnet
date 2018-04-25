@@ -7,7 +7,7 @@ namespace Microsoft.Bot.Builder.Alexa.Integration
     {
         public AlexaBotPaths()
         {
-            this.BasePath = "/api";
+            this.BasePath = "api";
             this.SkillRequestsPath = "skillrequests";
         }
 
