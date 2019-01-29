@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Adapters;
 using Microsoft.Bot.Builder.Dialogs.Choices;
@@ -47,26 +46,6 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                     Assert.AreEqual(expectedSuggestedActions.Actions[i].Type, msg.SuggestedActions.Actions[i].Type);
                     Assert.AreEqual(expectedSuggestedActions.Actions[i].Value, msg.SuggestedActions.Actions[i].Value);
                     Assert.AreEqual(expectedSuggestedActions.Actions[i].Title, msg.SuggestedActions.Actions[i].Title);
-                }
-            };
-        }
-
-        private Action<IActivity> HeroCardValidator(HeroCard expectedHeroCard)
-        {
-            return activity =>
-            {
-                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
-                var msg = (IMessageActivity)activity;
-
-                var attachedHeroCard = (HeroCard)msg.Attachments.First().Content;
-
-                Assert.AreEqual(expectedHeroCard.Title, attachedHeroCard.Title);
-                Assert.AreEqual(expectedHeroCard.Buttons.Count, attachedHeroCard.Buttons.Count);
-                for (var i = 0; i < expectedHeroCard.Buttons.Count; i++)
-                {
-                    Assert.AreEqual(expectedHeroCard.Buttons[i].Type, attachedHeroCard.Buttons[i].Type);
-                    Assert.AreEqual(expectedHeroCard.Buttons[i].Value, attachedHeroCard.Buttons[i].Value);
-                    Assert.AreEqual(expectedHeroCard.Buttons[i].Title, attachedHeroCard.Buttons[i].Title);
                 }
             };
         }
@@ -245,50 +224,6 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                     }
                 }))
             .StartTestAsync();
-        }
-
-        [TestMethod]
-        public async Task ShouldSendPromptUsingHeroCard()
-        {
-            var convoState = new ConversationState(new MemoryStorage());
-            var dialogState = convoState.CreateProperty<DialogState>("dialogState");
-
-            var adapter = new TestAdapter()
-                .Use(new AutoSaveStateMiddleware(convoState));
-
-            var dialogs = new DialogSet(dialogState);
-            var listPrompt = new ChoicePrompt("ChoicePrompt", defaultLocale: Culture.English);
-            listPrompt.Style = ListStyle.HeroCard;
-            dialogs.Add(listPrompt);
-
-            await new TestFlow(adapter, async (turnContext, cancellationToken) =>
-                {
-                    var dc = await dialogs.CreateContextAsync(turnContext, cancellationToken);
-
-                    var results = await dc.ContinueDialogAsync(cancellationToken);
-                    if (results.Status == DialogTurnStatus.Empty)
-                    {
-                        await dc.PromptAsync("ChoicePrompt",
-                            new PromptOptions
-                            {
-                                Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                                Choices = colorChoices
-                            },
-                            cancellationToken);
-                    }
-                })
-                .Send("hello")
-                .AssertReply(HeroCardValidator(new HeroCard
-                    {
-                        Text = "favorite color?",
-                        Buttons = new List<CardAction>
-                        {
-                            new CardAction { Type="imBack", Value="red", Title="red" },
-                            new CardAction { Type="imBack", Value="green", Title="green" },
-                            new CardAction { Type="imBack", Value="blue", Title="blue" },
-                        }
-                    }))
-                .StartTestAsync();
         }
 
         [TestMethod]
