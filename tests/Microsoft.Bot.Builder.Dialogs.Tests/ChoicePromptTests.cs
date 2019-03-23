@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Adapters;
 using Microsoft.Bot.Builder.Dialogs.Choices;
@@ -17,55 +18,18 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
     [TestCategory("Choice Prompts")]
     public class ChoicePromptTests
     {
-        private List<Choice> colorChoices = new List<Choice> {
+        private List<Choice> colorChoices = new List<Choice>
+        {
             new Choice { Value = "red" },
             new Choice { Value = "green" },
-            new Choice { Value = "blue" }
+            new Choice { Value = "blue" },
         };
-
-        private Action<IActivity> StartsWithValidator(string expected)
-        {
-            return activity =>
-            {
-                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
-                var msg = (IMessageActivity)activity;
-                Assert.IsTrue(msg.Text.StartsWith(expected));
-            };
-        }
-
-        private Action<IActivity> SuggestedActionsValidator(string expectedText, SuggestedActions expectedSuggestedActions)
-        {
-            return activity =>
-            {
-                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
-                var msg = (IMessageActivity)activity;
-                Assert.AreEqual(expectedText, msg.Text);
-                Assert.AreEqual(expectedSuggestedActions.Actions.Count, msg.SuggestedActions.Actions.Count);
-                for (var i = 0; i < expectedSuggestedActions.Actions.Count; i++)
-                {
-                    Assert.AreEqual(expectedSuggestedActions.Actions[i].Type, msg.SuggestedActions.Actions[i].Type);
-                    Assert.AreEqual(expectedSuggestedActions.Actions[i].Value, msg.SuggestedActions.Actions[i].Value);
-                    Assert.AreEqual(expectedSuggestedActions.Actions[i].Title, msg.SuggestedActions.Actions[i].Title);
-                }
-            };
-        }
-
-        private Action<IActivity> SpeakValidator(string expectedText, string expectedSpeak)
-        {
-            return activity =>
-            {
-                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
-                var msg = (IMessageActivity)activity;
-                Assert.AreEqual(expectedText, msg.Text);
-                Assert.AreEqual(expectedSpeak, msg.Speak);
-            };
-        }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void ChoicePromptWithEmptyIdShouldFail()
         {
-            var emptyId = "";
+            var emptyId = string.Empty;
             var choicePrompt = new ChoicePrompt(emptyId);
         }
 
@@ -73,7 +37,7 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
         [ExpectedException(typeof(ArgumentNullException))]
         public void ChoicePromptWithNullIdShouldFail()
         {
-            var nullId = "";
+            var nullId = string.Empty;
             nullId = null;
             var choicePrompt = new ChoicePrompt(nullId);
         }
@@ -98,11 +62,12 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -131,11 +96,12 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync();
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -168,11 +134,12 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -203,27 +170,74 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
             })
             .Send("hello")
-            .AssertReply(SuggestedActionsValidator("favorite color?",
+            .AssertReply(SuggestedActionsValidator(
+                "favorite color?",
                 new SuggestedActions
                 {
                     Actions = new List<CardAction>
                     {
-                        new CardAction { Type="imBack", Value="red", Title="red" },
-                        new CardAction { Type="imBack", Value="green", Title="green" },
-                        new CardAction { Type="imBack", Value="blue", Title="blue" },
-                    }
+                        new CardAction { Type = "imBack", Value = "red", Title = "red" },
+                        new CardAction { Type = "imBack", Value = "green", Title = "green" },
+                        new CardAction { Type = "imBack", Value = "blue", Title = "blue" },
+                    },
                 }))
             .StartTestAsync();
+        }
+
+        [TestMethod]
+        public async Task ShouldSendPromptUsingHeroCard()
+        {
+            var convoState = new ConversationState(new MemoryStorage());
+            var dialogState = convoState.CreateProperty<DialogState>("dialogState");
+
+            var adapter = new TestAdapter()
+                .Use(new AutoSaveStateMiddleware(convoState));
+
+            var dialogs = new DialogSet(dialogState);
+            var listPrompt = new ChoicePrompt("ChoicePrompt", defaultLocale: Culture.English);
+            listPrompt.Style = ListStyle.HeroCard;
+            dialogs.Add(listPrompt);
+
+            await new TestFlow(adapter, async (turnContext, cancellationToken) =>
+                {
+                    var dc = await dialogs.CreateContextAsync(turnContext, cancellationToken);
+
+                    var results = await dc.ContinueDialogAsync(cancellationToken);
+                    if (results.Status == DialogTurnStatus.Empty)
+                    {
+                        await dc.PromptAsync(
+                            "ChoicePrompt",
+                            new PromptOptions
+                            {
+                                Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
+                                Choices = colorChoices,
+                            },
+                            cancellationToken);
+                    }
+                })
+                .Send("hello")
+                .AssertReply(HeroCardValidator(new HeroCard
+                    {
+                        Text = "favorite color?",
+                        Buttons = new List<CardAction>
+                        {
+                            new CardAction { Type = "imBack", Value = "red", Title = "red" },
+                            new CardAction { Type = "imBack", Value = "green", Title = "green" },
+                            new CardAction { Type = "imBack", Value = "blue", Title = "blue" },
+                        },
+                    }))
+                .StartTestAsync();
         }
 
         [TestMethod]
@@ -248,11 +262,12 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -284,15 +299,17 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
-                            Prompt = new Activity {
+                            Prompt = new Activity
+                            {
                                 Type = ActivityTypes.Message,
                                 Text = "favorite color?",
-                                Speak = "spoken prompt"
+                                Speak = "spoken prompt",
                             },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -324,11 +341,12 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -366,12 +384,13 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
                             RetryPrompt = new Activity { Type = ActivityTypes.Message, Text = "your favorite color, please?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -410,11 +429,12 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                 var results = await dc.ContinueDialogAsync(cancellationToken);
                 if (results.Status == DialogTurnStatus.Empty)
                 {
-                    await dc.PromptAsync("ChoicePrompt",
+                    await dc.PromptAsync(
+                        "ChoicePrompt",
                         new PromptOptions
                         {
                             Prompt = new Activity { Type = ActivityTypes.Message, Text = "favorite color?" },
-                            Choices = colorChoices
+                            Choices = colorChoices,
                         },
                         cancellationToken);
                 }
@@ -472,5 +492,63 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
             .AssertReply("NotRecognized")
             .StartTestAsync();
         }*/
+
+        private Action<IActivity> StartsWithValidator(string expected)
+        {
+            return activity =>
+            {
+                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
+                var msg = (IMessageActivity)activity;
+                Assert.IsTrue(msg.Text.StartsWith(expected));
+            };
+        }
+
+        private Action<IActivity> SuggestedActionsValidator(string expectedText, SuggestedActions expectedSuggestedActions)
+        {
+            return activity =>
+            {
+                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
+                var msg = (IMessageActivity)activity;
+                Assert.AreEqual(expectedText, msg.Text);
+                Assert.AreEqual(expectedSuggestedActions.Actions.Count, msg.SuggestedActions.Actions.Count);
+                for (var i = 0; i < expectedSuggestedActions.Actions.Count; i++)
+                {
+                    Assert.AreEqual(expectedSuggestedActions.Actions[i].Type, msg.SuggestedActions.Actions[i].Type);
+                    Assert.AreEqual(expectedSuggestedActions.Actions[i].Value, msg.SuggestedActions.Actions[i].Value);
+                    Assert.AreEqual(expectedSuggestedActions.Actions[i].Title, msg.SuggestedActions.Actions[i].Title);
+                }
+            };
+        }
+
+        private Action<IActivity> HeroCardValidator(HeroCard expectedHeroCard)
+        {
+            return activity =>
+            {
+                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
+                var msg = (IMessageActivity)activity;
+
+                var attachedHeroCard = (HeroCard)msg.Attachments.First().Content;
+
+                Assert.AreEqual(expectedHeroCard.Title, attachedHeroCard.Title);
+                Assert.AreEqual(expectedHeroCard.Buttons.Count, attachedHeroCard.Buttons.Count);
+                for (var i = 0; i < expectedHeroCard.Buttons.Count; i++)
+                {
+                    Assert.AreEqual(expectedHeroCard.Buttons[i].Type, attachedHeroCard.Buttons[i].Type);
+                    Assert.AreEqual(expectedHeroCard.Buttons[i].Value, attachedHeroCard.Buttons[i].Value);
+                    Assert.AreEqual(expectedHeroCard.Buttons[i].Title, attachedHeroCard.Buttons[i].Title);
+                }
+            };
+        }
+
+        private Action<IActivity> SpeakValidator(string expectedText, string expectedSpeak)
+        {
+            return activity =>
+            {
+                Assert.IsInstanceOfType(activity, typeof(IMessageActivity));
+                var msg = (IMessageActivity)activity;
+                Assert.AreEqual(expectedText, msg.Text);
+                Assert.AreEqual(expectedSpeak, msg.Speak);
+            };
         }
     }
+}
