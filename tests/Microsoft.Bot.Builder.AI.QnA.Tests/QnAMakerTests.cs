@@ -25,7 +25,6 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
         private const string _endpointKey = "dummy-key";
         private const string _hostname = "https://dummy-hostname.azurewebsites.net/qnamaker";
 
-
         [TestMethod]
         [TestCategory("AI")]
         [TestCategory("QnAMaker")]
@@ -35,16 +34,17 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_ReturnsAnswer.json"));
-            var qna = GetQnAMaker(mockHttp,
+            var qna = GetQnAMaker(
+                mockHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions
                 {
-                    Top = 1
+                    Top = 1,
                 });
 
             // Invoke flow which uses mock
@@ -68,7 +68,7 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 var typingActivity = new Activity
                 {
                     Type = ActivityTypes.Typing,
-                    RelatesTo = context.Activity.RelatesTo
+                    RelatesTo = context.Activity.RelatesTo,
                 };
                 await context.SendActivityAsync(typingActivity);
                 await Task.Delay(500);
@@ -99,7 +99,6 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 Assert.IsTrue(!string.IsNullOrWhiteSpace(activity.Id));
                 Assert.IsTrue(activity.Timestamp > default(DateTimeOffset));
             }
-
         }
 
         [TestMethod]
@@ -116,13 +115,12 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var activity = new Activity
             {
                 Type = ActivityTypes.Message,
-                Text = "",
+                Text = string.Empty,
                 Conversation = new ConversationAccount(),
                 Recipient = new ChannelAccount(),
-                From = new ChannelAccount()
+                From = new ChannelAccount(),
             };
             var context = new TurnContext(adapter, activity);
-
 
             var results = await qna.GetAnswersAsync(context);
         }
@@ -144,7 +142,7 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 Text = null,
                 Conversation = new ConversationAccount(),
                 Recipient = new ChannelAccount(),
-                From = new ChannelAccount()
+                From = new ChannelAccount(),
             };
             var context = new TurnContext(adapter, activity);
 
@@ -180,10 +178,9 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 Text = "My Text",
                 Conversation = new ConversationAccount(),
                 Recipient = new ChannelAccount(),
-                From = new ChannelAccount()
+                From = new ChannelAccount(),
             };
             var context = new TurnContext(adapter, activity);
-
 
             var results = await qna.GetAnswersAsync(context);
         }
@@ -201,7 +198,6 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var adapter = new TestAdapter();
             var context = new MyTurnContext(adapter, null);
 
-
             var results = await qna.GetAnswersAsync(context);
         }
 
@@ -214,16 +210,17 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_ReturnsAnswer.json"));
 
-            var qna = GetQnAMaker(mockHttp,
+            var qna = GetQnAMaker(
+                mockHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions
                 {
-                    Top = 1
+                    Top = 1,
                 });
 
             var results = await qna.GetAnswersAsync(GetContext("how do I clean the stove?"));
@@ -245,12 +242,12 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KbId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Hostname = _hostname
+                Hostname = _hostname,
             };
 
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
 
             var client = new HttpClient(mockHttp);
@@ -273,21 +270,22 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
 
             var interceptHttp = new InterceptRequestHandler(mockHttp);
 
-            var qna = GetQnAMaker(interceptHttp,
+            var qna = GetQnAMaker(
+                interceptHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 });
 
             var options = new QnAMakerOptions
             {
                 StrictFilters = new Metadata[]
                 {
-                    new Metadata() { Name = "topic", Value = "value" }
+                    new Metadata() { Name = "topic", Value = "value" },
                 },
-                Top = 1
+                Top = 1,
             };
 
             var results = await qna.GetAnswersAsync(GetContext("how do I clean the stove?"), options);
@@ -312,22 +310,23 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_ReturnsAnswer.json"));
-            
-            var qnaWithZeroValueThreshold = GetQnAMaker(mockHttp,
+
+            var qnaWithZeroValueThreshold = GetQnAMaker(
+                mockHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions()
                 {
-                    ScoreThreshold = 0.0F
+                    ScoreThreshold = 0.0F,
                 });
-            
+
             var results = await qnaWithZeroValueThreshold
                 .GetAnswersAsync(GetContext("how do I clean the stove?"), new QnAMakerOptions() { Top = 1 });
-            
+
             Assert.IsNotNull(results);
             Assert.AreEqual(1, results.Length);
         }
@@ -341,17 +340,18 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_TestThreshold.json"));
 
-            var qna = GetQnAMaker(mockHttp,
+            var qna = GetQnAMaker(
+                mockHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions
                 {
                     Top = 1,
-                    ScoreThreshold = 0.99F
+                    ScoreThreshold = 0.99F,
                 });
 
             var results = await qna.GetAnswersAsync(GetContext("how do I clean the stove?"));
@@ -369,17 +369,16 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
 
             var tooLargeThreshold = new QnAMakerOptions
             {
                 ScoreThreshold = 1.1F,
-                Top = 1
+                Top = 1,
             };
 
             var qnaWithLargeThreshold = new QnAMaker(endpoint, tooLargeThreshold);
-
         }
 
         [TestMethod]
@@ -392,13 +391,13 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
 
             var tooSmallThreshold = new QnAMakerOptions
             {
                 ScoreThreshold = -9000.0F,
-                Top = 1
+                Top = 1,
             };
 
             var qnaWithSmallThreshold = new QnAMaker(endpoint, tooSmallThreshold);
@@ -415,12 +414,12 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions
                 {
                     Top = -1,
-                    ScoreThreshold = 0.5F
+                    ScoreThreshold = 0.5F,
                 });
         }
 
@@ -433,11 +432,10 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var qnaNullEndpoint = new QnAMaker(
                 new QnAMakerEndpoint()
                 {
-                    KnowledgeBaseId = "",
+                    KnowledgeBaseId = string.Empty,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
-                }
-            );
+                    Host = _hostname,
+                });
         }
 
         [TestMethod]
@@ -450,10 +448,9 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 new QnAMakerEndpoint()
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
-                    EndpointKey = "",
-                    Host = _hostname
-                }
-            );
+                    EndpointKey = string.Empty,
+                    Host = _hostname,
+                });
         }
 
         [TestMethod]
@@ -467,9 +464,8 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = ""
-                }
-            );
+                    Host = string.Empty,
+                });
         }
 
         [TestMethod]
@@ -483,16 +479,17 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
 
             var interceptHttp = new InterceptRequestHandler(mockHttp);
 
-            var qna = GetQnAMaker(interceptHttp,
+            var qna = GetQnAMaker(
+                interceptHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions
                 {
-                    Top = 1
+                    Top = 1,
                 });
 
             var results = await qna.GetAnswersAsync(GetContext("how do I clean the stove?"));
@@ -514,16 +511,16 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetV2LegacyRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_LegacyEndpointAnswer.json"));
-            
+
             var v2LegacyEndpoint = new QnAMakerEndpoint
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = $"{_hostname}/v2.0"
+                Host = $"{_hostname}/v2.0",
             };
 
             var v2Qna = GetQnAMaker(mockHttp, v2LegacyEndpoint);
-            
+
             var v2legacyResult = await v2Qna.GetAnswersAsync(GetContext("How do I be the best?"));
 
             Assert.IsNotNull(v2legacyResult);
@@ -538,16 +535,16 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetV3LegacyRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_LegacyEndpointAnswer.json"));
-            
+
             var v3LegacyEndpoint = new QnAMakerEndpoint
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = $"{_hostname}/v3.0"
+                Host = $"{_hostname}/v3.0",
             };
 
             var v3Qna = GetQnAMaker(mockHttp, v3LegacyEndpoint);
-            
+
             var v3legacyResult = await v3Qna.GetAnswersAsync(GetContext("How do I be the best?"));
 
             Assert.IsNotNull(v3legacyResult);
@@ -571,25 +568,23 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 });
-            
+
             var options = new QnAMakerOptions
             {
                 MetadataBoost = new Metadata[]
                 {
-                    new Metadata() { Name = "artist", Value = "drake" }
+                    new Metadata() { Name = "artist", Value = "drake" },
                 },
-                Top = 1
+                Top = 1,
             };
 
             var results = await qna.GetAnswersAsync(GetContext("who loves me?"), options);
-            
+
             Assert.IsNotNull(results);
             Assert.AreEqual(results.Length, 1, "should get one result");
             StringAssert.StartsWith(results[0].Answer, "Kiki");
-
-
         }
 
         [TestMethod]
@@ -600,28 +595,27 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                 .Respond("application/json", GetResponse("QnaMaker_ReturnsAnswer_GivenScoreThresholdQueryOption.json"));
-            
+
             var interceptHttp = new InterceptRequestHandler(mockHttp);
 
             var qna = GetQnAMaker(
-                interceptHttp, 
+                interceptHttp,
                 new QnAMakerEndpoint()
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 });
-            
+
             var queryOptionsWithScoreThreshold = new QnAMakerOptions()
             {
                 ScoreThreshold = 0.5F,
-                Top = 2
+                Top = 2,
             };
 
             var result = await qna.GetAnswersAsync(
-                    GetContext("What happens when you hug a porcupine?"), 
-                    queryOptionsWithScoreThreshold
-            );
+                    GetContext("What happens when you hug a porcupine?"),
+                    queryOptionsWithScoreThreshold);
 
             Assert.IsNotNull(result);
 
@@ -639,16 +633,16 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                 .Respond(System.Net.HttpStatusCode.BadGateway);
-            
+
             var qna = GetQnAMaker(
                 mockHttp,
                 new QnAMakerEndpoint()
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 });
-            
+
             var results = await qna.GetAnswersAsync(GetContext("how do I clean the stove?"));
         }
 
@@ -669,17 +663,15 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
 
             // Act (Null Telemetry client)
-            //
             //    This will default to the NullTelemetryClient which no-ops all calls.
-            //
             var qna = new QnAMaker(endpoint, options, client, null, true);
             var results = await qna.GetAnswersAsync(GetContext("how do I clean the stove?"));
 
@@ -707,11 +699,11 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
             var telemetryClient = new Mock<IBotTelemetryClient>();
 
@@ -732,6 +724,7 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             Assert.IsTrue(((Dictionary<string, string>)telemetryClient.Invocations[0].Arguments[1]).ContainsKey("articleFound"));
             Assert.AreEqual(((Dictionary<string, double>)telemetryClient.Invocations[0].Arguments[2]).Count, 1);
             Assert.IsTrue(((Dictionary<string, double>)telemetryClient.Invocations[0].Arguments[2]).ContainsKey("score"));
+
             // Assert - Validate we didn't break QnA functionality.
             Assert.IsNotNull(results);
             Assert.AreEqual(results.Length, 1, "should get one result");
@@ -756,11 +749,11 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
             var telemetryClient = new Mock<IBotTelemetryClient>();
 
@@ -781,6 +774,7 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             Assert.IsTrue(((Dictionary<string, string>)telemetryClient.Invocations[0].Arguments[1]).ContainsKey("articleFound"));
             Assert.AreEqual(((Dictionary<string, double>)telemetryClient.Invocations[0].Arguments[2]).Count, 1);
             Assert.IsTrue(((Dictionary<string, double>)telemetryClient.Invocations[0].Arguments[2]).ContainsKey("score"));
+
             // Assert - Validate we didn't break QnA functionality.
             Assert.IsNotNull(results);
             Assert.AreEqual(results.Length, 1, "should get one result");
@@ -805,11 +799,11 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
             var telemetryClient = new Mock<IBotTelemetryClient>();
 
@@ -859,11 +853,11 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
             var telemetryClient = new Mock<IBotTelemetryClient>();
 
@@ -922,18 +916,16 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
             var telemetryClient = new Mock<IBotTelemetryClient>();
 
             // Act - Pass in properties during QnA invocation that override default properties
-            //
             //  NOTE: We are invoking this with PII turned OFF, and passing a PII property (originalQuestion).
-            //
             var qna = new QnAMaker(endpoint, options, client, telemetryClient.Object, false);
             var telemetryProperties = new Dictionary<string, string>
             {
@@ -983,11 +975,11 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             {
                 KnowledgeBaseId = _knowlegeBaseId,
                 EndpointKey = _endpointKey,
-                Host = _hostname
+                Host = _hostname,
             };
             var options = new QnAMakerOptions
             {
-                Top = 1
+                Top = 1,
             };
             var telemetryClient = new Mock<IBotTelemetryClient>();
 
@@ -999,7 +991,6 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             //           - Set in GetAnswersAsync
             //       Logically, the GetAnswersAync should win.  But ultimately OnQnaResultsAsync decides since it is the last
             //       code to touch the properties before logging (since it actually logs the event).
-            //
             var qna = new OverrideFillTelemetry(endpoint, options, client, telemetryClient.Object, false);
             var telemetryProperties = new Dictionary<string, string>
             {
@@ -1034,11 +1025,22 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             Assert.AreEqual(((Dictionary<string, double>)telemetryClient.Invocations[0].Arguments[2])["score"], 3.14159);
         }
 
-
-
-
+        private static TurnContext GetContext(string utterance)
+        {
+            var b = new TestAdapter();
+            var a = new Activity
+            {
+                Type = ActivityTypes.Message,
+                Text = utterance,
+                Conversation = new ConversationAccount(),
+                Recipient = new ChannelAccount(),
+                From = new ChannelAccount(),
+            };
+            return new TurnContext(b, a);
+        }
 
         private string GetV2LegacyRequestUrl() => $"{_hostname}/v2.0/knowledgebases/{_knowlegeBaseId}/generateanswer";
+
         private string GetV3LegacyRequestUrl() => $"{_hostname}/v3.0/knowledgebases/{_knowlegeBaseId}/generateanswer";
 
         private string GetRequestUrl() => $"{_hostname}/knowledgebases/{_knowlegeBaseId}/generateanswer";
@@ -1051,26 +1053,28 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
 
         /// <summary>
         /// Return a stock Mocked Qna thats loaded with QnaMaker_ReturnsAnswer.json
-        /// 
-        /// Used for tests that just require any old qna instance
+        /// Used for tests that just require any old qna instance.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>
+        /// QnAMaker.
+        /// </returns>
         private QnAMaker QnaReturnsAnswer()
         {
             // Mock Qna
             var mockHttp = new MockHttpMessageHandler();
             mockHttp.When(HttpMethod.Post, GetRequestUrl())
                     .Respond("application/json", GetResponse("QnaMaker_ReturnsAnswer.json"));
-            var qna = GetQnAMaker(mockHttp,
+            var qna = GetQnAMaker(
+                mockHttp,
                 new QnAMakerEndpoint
                 {
                     KnowledgeBaseId = _knowlegeBaseId,
                     EndpointKey = _endpointKey,
-                    Host = _hostname
+                    Host = _hostname,
                 },
                 new QnAMakerOptions
                 {
-                    Top = 1
+                    Top = 1,
                 });
             return qna;
         }
@@ -1081,154 +1085,72 @@ namespace Microsoft.Bot.Builder.AI.QnA.Tests
             return new QnAMaker(endpoint, options, client);
         }
 
-        private static TurnContext GetContext(string utterance)
+        public class OverrideTelemetry : QnAMaker
         {
-            var b = new TestAdapter();
-            var a = new Activity
+            public OverrideTelemetry(QnAMakerEndpoint endpoint, QnAMakerOptions options, HttpClient httpClient, IBotTelemetryClient telemetryClient, bool logPersonalInformation)
+                : base(endpoint, options, httpClient, telemetryClient, logPersonalInformation)
             {
-                Type = ActivityTypes.Message,
-                Text = utterance,
-                Conversation = new ConversationAccount(),
-                Recipient = new ChannelAccount(),
-                From = new ChannelAccount()
-            };
-            return new TurnContext(b, a);
+            }
 
+            protected override Task OnQnaResultsAsync(
+                                        QueryResult[] queryResults,
+                                        ITurnContext turnContext,
+                                        Dictionary<string, string> telemetryProperties = null,
+                                        Dictionary<string, double> telemetryMetrics = null,
+                                        CancellationToken cancellationToken = default(CancellationToken))
+            {
+                var properties = telemetryProperties ?? new Dictionary<string, string>();
+
+                // GetAnswerAsync overrides derived class.
+                properties.TryAdd("MyImportantProperty", "myImportantValue");
+
+                // Log event
+                TelemetryClient.TrackEvent(
+                                QnATelemetryConstants.QnaMsgEvent,
+                                properties);
+
+                // Create second event.
+                var secondEventProperties = new Dictionary<string, string>();
+                secondEventProperties.Add("MyImportantProperty2", "myImportantValue2");
+                TelemetryClient.TrackEvent(
+                                "MySecondEvent",
+                                secondEventProperties);
+                return Task.CompletedTask;
+            }
+        }
+
+        public class OverrideFillTelemetry : QnAMaker
+        {
+            public OverrideFillTelemetry(QnAMakerEndpoint endpoint, QnAMakerOptions options, HttpClient httpClient, IBotTelemetryClient telemetryClient, bool logPersonalInformation)
+                : base(endpoint, options, httpClient, telemetryClient, logPersonalInformation)
+            {
+            }
+
+            protected override async Task OnQnaResultsAsync(
+                                        QueryResult[] queryResults,
+                                        ITurnContext turnContext,
+                                        Dictionary<string, string> telemetryProperties = null,
+                                        Dictionary<string, double> telemetryMetrics = null,
+                                        CancellationToken cancellationToken = default(CancellationToken))
+            {
+                var eventData = await FillQnAEventAsync(queryResults, turnContext, telemetryProperties, telemetryMetrics, cancellationToken).ConfigureAwait(false);
+
+                // Add my property
+                eventData.Properties.Add("MyImportantProperty", "myImportantValue");
+
+                // Log QnaMessage event
+                TelemetryClient.TrackEvent(
+                                QnATelemetryConstants.QnaMsgEvent,
+                                eventData.Properties,
+                                eventData.Metrics);
+
+                // Create second event.
+                var secondEventProperties = new Dictionary<string, string>();
+                secondEventProperties.Add("MyImportantProperty2", "myImportantValue2");
+                TelemetryClient.TrackEvent(
+                                "MySecondEvent",
+                                secondEventProperties);
+            }
         }
     }
-
-    public class OverrideTelemetry : QnAMaker
-    {
-        public OverrideTelemetry(QnAMakerEndpoint endpoint, QnAMakerOptions options, HttpClient httpClient, IBotTelemetryClient telemetryClient, bool logPersonalInformation)
-            : base(endpoint, options, httpClient, telemetryClient, logPersonalInformation)
-        {
-        }
-
-        protected override Task OnQnaResultsAsync(
-                                    QueryResult[] queryResults, 
-                                    ITurnContext turnContext, 
-                                    Dictionary<string, string> telemetryProperties = null, 
-                                    Dictionary<string, double> telemetryMetrics = null, 
-                                    CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var properties = telemetryProperties ?? new Dictionary<string, string>();
-            // GetAnswerAsync overrides derived class.
-            properties.TryAdd("MyImportantProperty", "myImportantValue");
-
-            // Log event
-            TelemetryClient.TrackEvent(
-                            QnATelemetryConstants.QnaMsgEvent,
-                            properties);
-
-            // Create second event.
-            var secondEventProperties = new Dictionary<string, string>();
-            secondEventProperties.Add("MyImportantProperty2",
-                                       "myImportantValue2");
-            TelemetryClient.TrackEvent(
-                            "MySecondEvent",
-                            secondEventProperties);
-            return Task.CompletedTask;
-        }
-    }
-
-    public class OverrideFillTelemetry : QnAMaker
-    {
-        public OverrideFillTelemetry(QnAMakerEndpoint endpoint, QnAMakerOptions options, HttpClient httpClient, IBotTelemetryClient telemetryClient, bool logPersonalInformation)
-            : base(endpoint, options, httpClient, telemetryClient, logPersonalInformation)
-        {
-        }
-
-        protected override async Task OnQnaResultsAsync(
-                                    QueryResult[] queryResults,
-                                    ITurnContext turnContext,
-                                    Dictionary<string, string> telemetryProperties = null,
-                                    Dictionary<string, double> telemetryMetrics = null,
-                                    CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var eventData = await FillQnAEventAsync(queryResults, turnContext, telemetryProperties, telemetryMetrics, cancellationToken).ConfigureAwait(false);
-
-            // Add my property
-            eventData.Properties.Add("MyImportantProperty", "myImportantValue");
-
-            // Log QnaMessage event
-            TelemetryClient.TrackEvent(
-                            QnATelemetryConstants.QnaMsgEvent,
-                            eventData.Properties,
-                            eventData.Metrics
-                            );
-
-            // Create second event.
-            var secondEventProperties = new Dictionary<string, string>();
-            secondEventProperties.Add("MyImportantProperty2",
-                                       "myImportantValue2");
-            TelemetryClient.TrackEvent(
-                            "MySecondEvent",
-                            secondEventProperties);
-        }
-    }
-
-
-    class MyTurnContext : ITurnContext
-    {
-
-        public MyTurnContext(BotAdapter adapter, Activity activity)
-        {
-            Activity = activity;
-            Adapter = adapter;
-        }
-        public BotAdapter Adapter { get; }
-
-        public TurnContextStateCollection TurnState => throw new NotImplementedException();
-
-        public Activity Activity { get; }
-
-        public bool Responded => throw new NotImplementedException();
-
-        public Task DeleteActivityAsync(string activityId, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task DeleteActivityAsync(ConversationReference conversationReference, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITurnContext OnDeleteActivity(DeleteActivityHandler handler)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITurnContext OnSendActivities(SendActivitiesHandler handler)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITurnContext OnUpdateActivity(UpdateActivityHandler handler)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ResourceResponse[]> SendActivitiesAsync(IActivity[] activities, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ResourceResponse> SendActivityAsync(string textReplyToSend, string speak = null, string inputHint = "acceptingInput", CancellationToken cancellationToken = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ResourceResponse> SendActivityAsync(IActivity activity, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ResourceResponse> UpdateActivityAsync(IActivity activity, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-
 }
