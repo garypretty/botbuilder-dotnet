@@ -30,6 +30,12 @@ namespace Microsoft.BotBuilderSamples
             InitialDialogId = nameof(WaterfallDialog);
         }
 
+        private static bool IsAmbiguous(string timex)
+        {
+            var timexPropery = new TimexProperty(timex);
+            return !timexPropery.Types.Contains(Constants.TimexTypes.Definite);
+        }
+
         private async Task<DialogTurnResult> DestinationStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
             var bookingDetails = (BookingDetails)stepContext.Options;
@@ -59,6 +65,7 @@ namespace Microsoft.BotBuilderSamples
                 return await stepContext.NextAsync(bookingDetails.Origin);
             }
         }
+
         private async Task<DialogTurnResult> TravelDateStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
             var bookingDetails = (BookingDetails)stepContext.Options;
@@ -98,12 +105,6 @@ namespace Microsoft.BotBuilderSamples
             {
                 return await stepContext.EndDialogAsync(null);
             }
-        }
-
-        private static bool IsAmbiguous(string timex)
-        {
-            var timexPropery = new TimexProperty(timex);
-            return !timexPropery.Types.Contains(Constants.TimexTypes.Definite);
         }
     }
 }

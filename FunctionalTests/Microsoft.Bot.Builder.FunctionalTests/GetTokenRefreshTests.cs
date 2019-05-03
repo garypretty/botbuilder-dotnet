@@ -1,55 +1,55 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Bot.Connector.Authentication;
-using Xunit;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Microsoft.Bot.Connector.Tests
+namespace Microsoft.Bot.Builder.FunctionalTests
 {
-    /// <summary>
-    /// Description for UnitTest1.
-    /// </summary>
+    [TestClass]
+    #if !FUNCTIONALTESTS
+    [Ignore("These integration tests run only when FUNCTIONALTESTS is defined")]
+    #endif
     public class GetTokenRefreshTests
     {
+        private string testAppId = null;
+        private string testPassword = null;
+
         public GetTokenRefreshTests()
         {
         }
 
-        //[Fact]
+        [TestMethod]
         public async Task TokenTests_GetCredentialsWorks()
         {
-            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials("645cd89f-a83e-4af9-abb5-a454e917cbc4", "jvoMWRBA67:zjgePZ359_-_");
+            GetEnvironmentVarsTestAppIdPassword();
+            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials(testAppId, testPassword);
             var result = await credentials.GetTokenAsync();
-            Assert.NotNull(result);
+            Assert.IsNotNull(result);
         }
 
-        //[Fact]
-        public async Task TokenTests_GetCredentialsFromTenantWorks()
-        {
-            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials("645cd89f-a83e-4af9-abb5-a454e917cbc4", "jvoMWRBA67:zjgePZ359_-_", "microsoft.com", null);
-            var result = await credentials.GetTokenAsync();
-            Assert.NotNull(result);
-        }
-
-        //[Fact]
+        [TestMethod]
         public async Task TokenTests_RefreshTokenWorks()
         {
-            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials("12604f0f-bc92-4318-a6dd-aed704445ba4", "H_k}}7b75BEl+KY1");
+            GetEnvironmentVarsTestAppIdPassword();
+            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials(testAppId, testPassword);
             var result = await credentials.GetTokenAsync();
-            Assert.NotNull(result);
+            Assert.IsNotNull(result);
             var result2 = await credentials.GetTokenAsync();
-            Assert.Equal(result, result2);
+            Assert.AreEqual(result, result2);
             var result3 = await credentials.GetTokenAsync(true);
-            Assert.NotNull(result3);
-            Assert.NotEqual(result2, result3);
+            Assert.IsNotNull(result3);
+            Assert.IsNotNull(result2, result3);
         }
 
-        //[Fact]
+        [TestMethod]
         public async Task TokenTests_RefreshTestLoad()
         {
-            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials("12604f0f-bc92-4318-a6dd-aed704445ba4", "H_k}}7b75BEl+KY1");
+            GetEnvironmentVarsTestAppIdPassword();
+            MicrosoftAppCredentials credentials = new MicrosoftAppCredentials(testAppId, testPassword);
             List<Task<string>> tasks = new List<Task<string>>();
             for (int i = 0; i < 1000; i++)
             {
@@ -60,10 +60,10 @@ namespace Microsoft.Bot.Connector.Tests
             foreach (var item in tasks)
             {
                 string result = await item;
-                Assert.NotNull(result);
+                Assert.IsNotNull(result);
                 if (prevResult != null)
                 {
-                    Assert.Equal(prevResult, result);
+                    Assert.AreEqual(prevResult, result);
                 }
 
                 prevResult = result;
@@ -89,20 +89,40 @@ namespace Microsoft.Bot.Connector.Tests
                 if (i == 0)
                 {
                     results.Add(result);
+                    Assert.IsNotNull(result);
                 }
 
-                Assert.NotNull(result);
                 if (prevResult != null)
                 {
                     if (i % 100 == 50)
                     {
-                        Assert.True(!results.Contains(result));
+                        Assert.IsTrue(!results.Contains(result));
                         results.Add(result);
                     }
                     else
                     {
-                        Assert.Contains(result, results);
+                        // Xunit.Assert.Contains(result, results);
+                        Assert.IsTrue(results.Contains(result));
                     }
+                }
+            }
+        }
+
+        private void GetEnvironmentVarsTestAppIdPassword()
+        {
+            if (string.IsNullOrWhiteSpace(testAppId) || string.IsNullOrWhiteSpace(testPassword))
+            {
+                testAppId = Environment.GetEnvironmentVariable("TESTAPPID");
+                if (string.IsNullOrWhiteSpace(testAppId))
+                {
+                    throw new Exception("Environment variable 'TestAppId' not found.");
+                }
+
+                testPassword = Environment.GetEnvironmentVariable("TESTPASSWORD");
+
+                if (string.IsNullOrWhiteSpace(testPassword))
+                {
+                    throw new Exception("Environment variable 'TestPassword' not found.");
                 }
             }
         }

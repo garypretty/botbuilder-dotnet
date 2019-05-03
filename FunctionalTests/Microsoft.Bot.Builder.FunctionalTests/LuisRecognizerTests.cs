@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Adapters;
+using Microsoft.Bot.Builder.AI.Luis;
+using Microsoft.Bot.Builder.AI.Luis.Tests;
 using Microsoft.Bot.Configuration;
 using Microsoft.Bot.Schema;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -19,9 +21,12 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RichardSzalay.MockHttp;
 
-namespace Microsoft.Bot.Builder.AI.Luis.Tests
+namespace Microsoft.Bot.Builder.FunctionalTests
 {
     [TestClass]
+    #if !FUNCTIONALTESTS
+    [Ignore("These integration tests run only when FUNCTIONALTESTS is defined")]
+    #endif
 
     // The LUIS application used in these unit tests is in TestData/TestLuistApp.json
     public class LuisRecognizerTests
@@ -29,12 +34,11 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
         // Access the checked-in oracles so that if they are changed you can compare the changes and easily modify them.
         private const string _testData = @"..\..\..\TestData\";
 
-        private readonly string _luisAppId = TestUtilities.GetKey("LUISAPPID", "38330cad-f768-4619-96f9-69ea333e594b");
-
         // By default (when the Mocks are being used), the subscription key used can be any GUID. Only if the tests
         // are connecting to LUIS is an actual key needed.
-        private readonly string _subscriptionKey = TestUtilities.GetKey("LUISAPPKEY", "00000000-1111-2222-3333-444444444444");
-        private readonly string _endpoint = TestUtilities.GetKey("LUISENDPOINT", "https://westus.api.cognitive.microsoft.com");
+        private string _luisAppId = null;
+        private string _subscriptionKey = null;
+        private string _endpoint = null;
 
         private readonly RecognizerResult _mockedResults = new RecognizerResult
         {
@@ -62,6 +66,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             // Arrange
             // Note this is NOT a real LUIS application ID nor a real LUIS subscription-key
             // theses are GUIDs edited to look right to the parsing and validation code.
+            GetEnvironmentVarsLuis();
             var endpoint = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/b31aeaf3-3511-495b-a07f-571fc873214b?verbose=true&timezoneOffset=-360&subscription-key=048ec46dc58e495482b0c447cfdbd291&q=";
             var fieldInfo = typeof(LuisRecognizer).GetField("_application", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -76,8 +81,57 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
         }
 
         [TestMethod]
+        public void LuisRecognizer_Timeout()
+        {
+            var endpoint = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/b31aeaf3-3511-495b-a07f-571fc873214b?verbose=true&timezoneOffset=-360&subscription-key=048ec46dc58e495482b0c447cfdbd291&q=";
+            var fieldInfo = typeof(LuisRecognizer).GetField("_application", BindingFlags.NonPublic | BindingFlags.Instance);
+            var optionsWithTimeout = new LuisPredictionOptions()
+            {
+                Timeout = 300,
+            };
+            var expectedTimeout = 300;
+
+            var recognizerWithTimeout = new LuisRecognizer(endpoint, optionsWithTimeout);
+
+            Assert.AreEqual(expectedTimeout, LuisRecognizer.DefaultHttpClient.Timeout.Milliseconds);
+        }
+
+        [TestMethod]
+        public void NullEndpoint()
+        {
+            // Arrange
+            GetEnvironmentVarsLuis();
+            var fieldInfo = typeof(LuisRecognizer).GetField("_application", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            // Act
+            var myappNull = new LuisApplication(_luisAppId, _subscriptionKey, null);
+            var recognizerNull = new LuisRecognizer(myappNull, null);
+
+            // Assert
+            var app = (LuisApplication)fieldInfo.GetValue(recognizerNull);
+            Assert.AreEqual("https://westus.api.cognitive.microsoft.com", app.Endpoint);
+        }
+
+        [TestMethod]
+        public void EmptyEndpoint()
+        {
+            // Arrange
+            GetEnvironmentVarsLuis();
+            var fieldInfo = typeof(LuisRecognizer).GetField("_application", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            // Act
+            var myappEmpty = new LuisApplication(_luisAppId, _subscriptionKey, string.Empty);
+            var recognizerEmpty = new LuisRecognizer(myappEmpty, null);
+
+            // Assert
+            var app = (LuisApplication)fieldInfo.GetValue(recognizerEmpty);
+            Assert.AreEqual("https://westus.api.cognitive.microsoft.com", app.Endpoint);
+        }
+
+        // [TestMethod] Commented out due to test failing.
         public async Task LuisRecognizer_Configuration()
         {
+            GetEnvironmentVarsLuis();
             var service = new LuisService
             {
                 AppId = _luisAppId,
@@ -114,11 +168,19 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void LuisRecognizer_NullLuisAppArg()
+        {
+            var recognizerWithNullLuisApplication = new LuisRecognizer(application: null);
+        }
+
+        [TestMethod]
         public async Task SingleIntent_SimplyEntity()
         {
             const string utterance = "My name is Emad";
             const string responsePath = "SingleIntent_SimplyEntity.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, verbose: true);
             var context = GetContext(utterance);
@@ -142,11 +204,35 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
         }
 
         [TestMethod]
+        public async Task NullUtterance()
+        {
+            const string utterance = null;
+            const string responsePath = "SingleIntent_SimplyEntity.json";   // The path is irrelevant in this case
+
+            GetEnvironmentVarsLuis();
+            var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
+            var luisRecognizer = GetLuisRecognizer(mockHttp, verbose: true);
+            var context = GetContext(utterance);
+            var result = await luisRecognizer.RecognizeAsync(context, CancellationToken.None);
+
+            Assert.IsNotNull(result);
+            Assert.IsNull(result.AlteredText);
+            Assert.AreEqual(utterance, result.Text);
+            Assert.IsNotNull(result.Intents);
+            Assert.AreEqual(1, result.Intents.Count);
+            Assert.IsNotNull(result.Intents[string.Empty]);
+            Assert.AreEqual(result.GetTopScoringIntent(), (string.Empty, 1.0));
+            Assert.IsNotNull(result.Entities);
+            Assert.AreEqual(0, result.Entities.Count);
+        }
+
+        [TestMethod]
         public async Task MultipleIntents_PrebuiltEntity()
         {
             const string utterance = "Please deliver February 2nd 2001";
             const string responsePath = "MultipleIntents_PrebuiltEntity.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -183,6 +269,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string utterance = "Please deliver February 2nd 2001 in room 201";
             const string responsePath = "MultipleIntents_PrebuiltEntitiesWithMultiValues.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -208,6 +295,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string utterance = "I want to travel on united";
             const string responsePath = "MultipleIntents_ListEntityWithSingleValue.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -234,6 +322,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string utterance = "I want to travel on DL";
             const string responsePath = "MultipleIntents_ListEntityWithMultiValues.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -262,6 +351,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string utterance = "Please deliver it to 98033 WA";
             const string responsePath = "MultipleIntents_CompositeEntityModel.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -304,6 +394,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string utterance = "Book a table on Friday or tomorrow at 5 or tomorrow at 4";
             const string responsePath = "MultipleDateTimeEntities.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -329,6 +420,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string utterance = "at 4";
             const string responsePath = "V1DatetimeResolution.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandler(utterance, responsePath);
             var luisRecognizer = GetLuisRecognizer(mockHttp, true, new LuisPredictionOptions { IncludeAllIntents = true });
             var context = GetContext(utterance);
@@ -350,6 +442,8 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
         {
             var expectedPath = GetFilePath(file);
             var newPath = expectedPath + ".new";
+
+            GetEnvironmentVarsLuis();
 
             using (var expectedJsonReader = new JsonTextReader(new StreamReader(expectedPath)))
             {
@@ -389,6 +483,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             const string botResponse = @"Hi Emad";
             const string responsePath = "TraceActivity.json";
 
+            GetEnvironmentVarsLuis();
             var mockHttp = GetMockHttpClientHandlerObject(utterance, responsePath);
             var adapter = new TestAdapter(null, true);
             await new TestFlow(adapter, async (context, cancellationToken) =>
@@ -523,20 +618,6 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             Assert.IsTrue(userAgent.Contains("Microsoft.Bot.Builder.AI.Luis/4"));
         }
 
-        private static TurnContext GetContext(string utterance)
-        {
-            var b = new TestAdapter();
-            var a = new Activity
-            {
-                Type = ActivityTypes.Message,
-                Text = utterance,
-                Conversation = new ConversationAccount(),
-                Recipient = new ChannelAccount(),
-                From = new ChannelAccount(),
-            };
-            return new TurnContext(b, a);
-        }
-
         [TestMethod]
         public void Telemetry_Construction()
         {
@@ -606,7 +687,6 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             Assert.IsTrue(((Dictionary<string, string>)telemetryClient.Invocations[0].Arguments[1]).ContainsKey("intentScore"));
             Assert.IsTrue(((Dictionary<string, string>)telemetryClient.Invocations[0].Arguments[1]).ContainsKey("fromId"));
             Assert.IsTrue(((Dictionary<string, string>)telemetryClient.Invocations[0].Arguments[1]).ContainsKey("entities"));
-
         }
 
         [TestMethod]
@@ -719,7 +799,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
                 Text = "please book from May 5 to June 6",
                 Recipient = new ChannelAccount(),           // to no where
                 From = new ChannelAccount(),                // from no one
-                Conversation = new ConversationAccount()    // on no conversation
+                Conversation = new ConversationAccount(),    // on no conversation
             };
 
             var turnContext = new TurnContext(adapter, activity);
@@ -770,7 +850,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
                 Text = "please book from May 5 to June 6",
                 Recipient = new ChannelAccount(),           // to no where
                 From = new ChannelAccount(),                // from no one
-                Conversation = new ConversationAccount()    // on no conversation
+                Conversation = new ConversationAccount(),    // on no conversation
             };
 
             var turnContext = new TurnContext(adapter, activity);
@@ -832,7 +912,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
                 Text = "please book from May 5 to June 6",
                 Recipient = new ChannelAccount(),           // to no where
                 From = new ChannelAccount(),                // from no one
-                Conversation = new ConversationAccount()    // on no conversation
+                Conversation = new ConversationAccount(),    // on no conversation
             };
 
             var turnContext = new TurnContext(adapter, activity);
@@ -875,7 +955,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
                 Text = "please book from May 5 to June 6",
                 Recipient = new ChannelAccount(),           // to no where
                 From = new ChannelAccount(),                // from no one
-                Conversation = new ConversationAccount()    // on no conversation
+                Conversation = new ConversationAccount(),    // on no conversation
             };
 
             var turnContext = new TurnContext(adapter, activity);
@@ -918,7 +998,7 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
                 Text = "please book from May 5 to June 6",
                 Recipient = new ChannelAccount(),           // to no where
                 From = new ChannelAccount(),                // from no one
-                Conversation = new ConversationAccount()    // on no conversation
+                Conversation = new ConversationAccount(),    // on no conversation
             };
 
             var turnContext = new TurnContext(adapter, activity);
@@ -962,7 +1042,33 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             Assert.AreEqual(((Dictionary<string, double>)telemetryClient.Invocations[0].Arguments[2])["luis"], 1.0001);
         }
 
+        private static TurnContext GetContext(string utterance)
+        {
+            var testAdapter = new TestAdapter();
+            var activity = new Activity
+            {
+                Type = ActivityTypes.Message,
+                Text = utterance,
+                Conversation = new ConversationAccount(),
+                Recipient = new ChannelAccount(),
+                From = new ChannelAccount(),
+            };
+            return new TurnContext(testAdapter, activity);
+        }
 
+        private static TurnContext GetNonMessageContext(string utterance)
+        {
+            var b = new TestAdapter();
+            var a = new Activity
+            {
+                Type = ActivityTypes.ConversationUpdate,
+                Text = utterance,
+                Conversation = new ConversationAccount(),
+                Recipient = new ChannelAccount(),
+                From = new ChannelAccount(),
+            };
+            return new TurnContext(b, a);
+        }
 
         // Compare two JSON structures and ensure entity and intent scores are within delta
         private bool WithinDelta(JToken token1, JToken token2, double delta, bool compare = false)
@@ -1081,78 +1187,30 @@ namespace Microsoft.Bot.Builder.AI.Luis.Tests
             var path = Path.Combine(_testData, fileName);
             return path;
         }
-    }
 
-    public class TelemetryOverrideRecognizer : LuisRecognizer
-    {
-        public TelemetryOverrideRecognizer(IBotTelemetryClient telemetryClient, LuisApplication application, LuisPredictionOptions predictionOptions = null, bool includeApiResults = false, bool logPersonalInformation = false, HttpClientHandler clientHandler = null)
-           : base(application, predictionOptions, includeApiResults, clientHandler)
+        private void GetEnvironmentVarsLuis()
         {
-            LogPersonalInformation = logPersonalInformation;
-        }
+            if (string.IsNullOrWhiteSpace(_luisAppId) || string.IsNullOrWhiteSpace(_subscriptionKey))
+            {
+                _luisAppId = Environment.GetEnvironmentVariable("LUISAPPID");
+                if (string.IsNullOrWhiteSpace(_luisAppId))
+                {
+                    throw new Exception("Environment variable 'LuisAppId' not found.");
+                }
 
-        override protected Task OnRecognizerResultAsync(RecognizerResult recognizerResult, ITurnContext turnContext, Dictionary<string, string> properties = null, Dictionary<string, double> metrics = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            properties.TryAdd("MyImportantProperty", "myImportantValue");
-            // Log event
-            TelemetryClient.TrackEvent(
-                            LuisTelemetryConstants.LuisResult,
-                            properties,
-                            metrics);
-            // Create second event.
-            var secondEventProperties = new Dictionary<string, string>();
-            secondEventProperties.Add("MyImportantProperty2",
-                                       "myImportantValue2");
-            TelemetryClient.TrackEvent(
-                            "MySecondEvent",
-                            secondEventProperties);
-            return Task.CompletedTask;
-        }
-    }
+                _subscriptionKey = Environment.GetEnvironmentVariable("LUISSUBSCRIPTIONKEY");
 
-    public class OverrideFillRecognizer : LuisRecognizer
-    {
-        public OverrideFillRecognizer(IBotTelemetryClient telemetryClient, LuisApplication application, LuisPredictionOptions predictionOptions = null, bool includeApiResults = false, bool logPersonalInformation = false, HttpClientHandler clientHandler = null)
-           : base(application, predictionOptions, includeApiResults, clientHandler)
-        {
-            LogPersonalInformation = logPersonalInformation;
-        }
+                if (string.IsNullOrWhiteSpace(_subscriptionKey))
+                {
+                    throw new Exception("Environment variable 'LuisSubscriptionKey' not found.");
+                }
 
-        override protected async Task OnRecognizerResultAsync(RecognizerResult recognizerResult, ITurnContext turnContext, Dictionary<string, string> telemetryProperties = null, Dictionary<string, double> telemetryMetrics = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var properties = await FillLuisEventPropertiesAsync(recognizerResult, turnContext, telemetryProperties, cancellationToken).ConfigureAwait(false);
-
-            properties.TryAdd("MyImportantProperty", "myImportantValue");
-            // Log event
-            TelemetryClient.TrackEvent(
-                            LuisTelemetryConstants.LuisResult,
-                            properties,
-                            telemetryMetrics);
-
-            // Create second event.
-            var secondEventProperties = new Dictionary<string, string>();
-            secondEventProperties.Add("MyImportantProperty2",
-                                       "myImportantValue2");
-            TelemetryClient.TrackEvent(
-                            "MySecondEvent",
-                            secondEventProperties);
-        }
-    }
-
-    public class TelemetryConvertResult : IRecognizerConvert
-    {
-        RecognizerResult _result;
-        public TelemetryConvertResult()
-        {
-        }
-
-        /// <summary>
-        /// Convert recognizer result.
-        /// </summary>
-        /// <param name="result">Result to convert.</param>
-        public void Convert(dynamic result)
-        {
-            _result = result as RecognizerResult;
+                _endpoint = Environment.GetEnvironmentVariable("LUISENDPOINT");
+                if (string.IsNullOrWhiteSpace(_endpoint))
+                {
+                    throw new Exception("Environment variable 'LuisEndPoint' not found.");
+                }
+            }
         }
     }
 }

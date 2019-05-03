@@ -20,7 +20,7 @@ namespace Microsoft.BotBuilderSamples
             {
                 InitialStepAsync,
                 FinalStepAsync,
-            }));
+           }));
 
             // The initial child Dialog to run.
             InitialDialogId = nameof(WaterfallDialog);
@@ -36,11 +36,12 @@ namespace Microsoft.BotBuilderSamples
             if (timex == null)
             {
                 // We were not given any date at all so prompt the user.
-                return await stepContext.PromptAsync(nameof(DateTimePrompt),
+                return await stepContext.PromptAsync(
+                    nameof(DateTimePrompt),
                     new PromptOptions
                     {
                         Prompt = MessageFactory.Text(promptMsg),
-                        RetryPrompt = MessageFactory.Text(repromptMsg)
+                        RetryPrompt = MessageFactory.Text(repromptMsg),
                     }, cancellationToken);
             }
             else
@@ -50,10 +51,11 @@ namespace Microsoft.BotBuilderSamples
                 if (!timexProperty.Types.Contains(Constants.TimexTypes.Definite))
                 {
                     // This is essentially a "reprompt" of the data we were given up front.
-                    return await stepContext.PromptAsync(nameof(DateTimePrompt),
+                    return await stepContext.PromptAsync(
+                        nameof(DateTimePrompt),
                         new PromptOptions
                         {
-                            Prompt = MessageFactory.Text(repromptMsg)
+                            Prompt = MessageFactory.Text(repromptMsg),
                         }, cancellationToken);
                 }
                 else
