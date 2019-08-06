@@ -1,19 +1,16 @@
 
-# ![Bot Framework for dotnet](./doc/media/FrameWorkSDK_C.png)
+# ![Bot Framework for dotnet](./doc/media/BotFrameworkDotnet_header.png)
 
-# Bot Framework SDK v4 for .NET 
+### [Click here to find out what's new with Bot Framework](https://github.com/Microsoft/botframework/blob/master/whats-new.md#whats-new)
+
+# Bot Framework SDK v4 for .NET
 This repository contains code for the .NET version of the [Microsoft Bot Framework SDK](https://github.com/Microsoft/botbuilder). The Bot Framework SDK v4 enable developers to model conversation and build sophisticated bot applications using .NET.
 
 This repo is part the [Microsoft Bot Framework](https://github.com/Microsoft/botframework) - a comprehensive framework for building enterprise-grade conversational AI experiences.
 
- | Branch | Description        | Build Status | Coverage Status | Functional Tests Status |
- |----|---------------|--------------|-----------------|--|
- |Master | 4.5.* Preview Builds |[![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/Bot.Builder-DotNet?branchName=master)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=215&branchName=master) |[![Coverage Status](https://coveralls.io/repos/github/Microsoft/botbuilder-dotnet/badge.svg?branch=master)](https://coveralls.io/github/Microsoft/botbuilder-dotnet?branch=master) | [![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/DotNet/BotBuilder-DotNet%20master%20Functional%20Tests?branchName=master)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=484&branchName=master)
-  |4.4 | 4.4.* Preview Builds |[![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/Bot.Builder-DotNet?branchName=4.4)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=215&branchName=4.4) |[![Coverage Status](https://coveralls.io/repos/github/Microsoft/botbuilder-dotnet/badge.svg?branch=4.4)](https://coveralls.io/github/Microsoft/botbuilder-dotnet?branch=4.4) | [![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/DotNet/BotBuilder-DotNet%20master%20Functional%20Tests?branchName=4.4)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=484&branchName=4.4)
-   |4.3 | 4.3.* Preview Builds |[![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/Bot.Builder-DotNet?branchName=4.3)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=215&branchName=4.3) |[![Coverage Status](https://coveralls.io/repos/github/Microsoft/botbuilder-dotnet/badge.svg?branch=4.3)](https://coveralls.io/github/Microsoft/botbuilder-dotnet?branch=4.3) | [![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/DotNet/BotBuilder-DotNet%20master%20Functional%20Tests?branchName=4.3)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=484&branchName=4.3)
- |4.2 | 4.2.* Preview Builds |[![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/Bot.Builder-DotNet?branchName=4.2)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=215&branchName=4.2) |[![Coverage Status](https://coveralls.io/repos/github/Microsoft/botbuilder-dotnet/badge.svg?branch=4.2)](https://coveralls.io/github/Microsoft/botbuilder-dotnet?branch=4.2)
-  |4.1 | 4.1.* Patch Builds |[![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/Bot.Builder-DotNet%204.1%20CI-CD?branchName=4.1)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=351&branchName=4.1) | [![Coverage Status](https://coveralls.io/repos/github/Microsoft/botbuilder-dotnet/badge.svg?branch=4.1)](https://coveralls.io/github/Microsoft/botbuilder-dotnet?branch=4.1)
- |4.0 | 4.0.* Patch Builds | [![Build status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/Bot.Builder-DotNet-4.0%20Branch?branchName=4.0)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=341) | N/A |
+ | Branch | Description        | Build Status | Coverage Status | Windows Bot Test Status | Linux Bot Test Status |
+ |----|---------------|--------------|-----------------|--|--|
+ |Master | 4.6.* Preview Builds |[![Build Status](https://fuselabs.visualstudio.com/SDK_v4/_apis/build/status/DotNet/BotBuilder-DotNet-Signed-daily?branchName=master)](https://fuselabs.visualstudio.com/SDK_v4/_build/latest?definitionId=277&branchName=master) |[![Coverage Status](https://coveralls.io/repos/github/Microsoft/botbuilder-dotnet/badge.svg?branch=master&service=github)](https://coveralls.io/github/Microsoft/botbuilder-dotnet?branch=master) | [![Tests status](https://fuselabs.vsrm.visualstudio.com/_apis/public/Release/badge/86659c66-c9df-418a-a371-7de7aed35064/48/48)](https://fuselabs.visualstudio.com/SDK_v4/_release?definitionId=48&_a=releases) |  [![Tests status](https://fuselabs.vsrm.visualstudio.com/_apis/public/Release/badge/86659c66-c9df-418a-a371-7de7aed35064/47/47)](https://fuselabs.visualstudio.com/SDK_v4/_release?definitionId=47&_a=releases)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Microsoft/botbuilder-dotnet/blob/master/LICENSE)
 [![Gitter](https://img.shields.io/gitter/room/Microsoft/BotBuilder.svg)](https://gitter.im/Microsoft/BotBuilder)
@@ -61,6 +58,5 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 ## Reporting Security Issues
 Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (MSRC) at [secure@microsoft.com](mailto:secure@microsoft.com). You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message. Further information, including the [MSRC PGP](https://technet.microsoft.com/en-us/security/dn606155) key, can be found in the [Security TechCenter](https://technet.microsoft.com/en-us/security/default).
 
-## License
 Copyright (c) Microsoft Corporation. All rights reserved.
 

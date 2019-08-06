@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 
 namespace Microsoft.Bot.Configuration.Tests
 {
     [TestClass]
     public class ConnectionTests
     {
-        private const string TestBotFileName = @"..\..\..\test.bot";
+        private const string TestBotFileName = @"../../../test.bot";
 
         [TestMethod]
         public async Task ConnectAssignsUniqueIds()
@@ -18,7 +19,7 @@ namespace Microsoft.Bot.Configuration.Tests
             var config2 = new BotConfiguration();
             foreach (var service in config.Services)
             {
-                service.Id = "1";
+                service.Id = string.Empty;
                 config2.ConnectService(service);
             }
 

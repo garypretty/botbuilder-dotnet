@@ -288,16 +288,50 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
             .StartTestAsync();
         }
 
+        private static TestFlow CreateTestFlow(WaterfallDialog waterfallDialog)
+        {
+            var convoState = new ConversationState(new MemoryStorage());
+            var dialogState = convoState.CreateProperty<DialogState>("dialogState");
+
+            var adapter = new TestAdapter()
+                .Use(new AutoSaveStateMiddleware(convoState));
+
+            var testFlow = new TestFlow(adapter, async (turnContext, cancellationToken) =>
+            {
+                var state = await dialogState.GetAsync(turnContext, () => new DialogState(), cancellationToken);
+                var dialogs = new DialogSet(dialogState);
+
+                dialogs.Add(new CancelledComponentDialog(waterfallDialog));
+
+                var dc = await dialogs.CreateContextAsync(turnContext, cancellationToken);
+
+                var results = await dc.ContinueDialogAsync(cancellationToken);
+                if (results.Status == DialogTurnStatus.Empty)
+                {
+                    results = await dc.BeginDialogAsync("TestComponentDialog", null, cancellationToken);
+                }
+
+                if (results.Status == DialogTurnStatus.Cancelled)
+                {
+                    await turnContext.SendActivityAsync(MessageFactory.Text($"Component dialog cancelled (result value is {results.Result?.ToString()})."), cancellationToken);
+                }
+                else if (results.Status == DialogTurnStatus.Complete)
+                {
+                    var value = (int)results.Result;
+                    await turnContext.SendActivityAsync(MessageFactory.Text($"Bot received the number '{value}'."), cancellationToken);
+                }
+            });
+            return testFlow;
+        }
+
         private static WaterfallDialog CreateWaterfall()
         {
             var steps = new WaterfallStep[]
-                {
+            {
                 WaterfallStep1,
                 WaterfallStep2,
             };
-            return new WaterfallDialog(
-                "test-waterfall",
-                steps);
+            return new WaterfallDialog("test-waterfall", steps);
         }
 
         private static async Task<DialogTurnResult> WaterfallStep1(WaterfallStepContext stepContext, CancellationToken cancellationToken)
@@ -327,6 +361,11 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
             return await stepContext.BeginDialogAsync("TestComponentDialog", null, cancellationToken);
         }
 
+        private static Task<DialogTurnResult> CancelledWaterfallStep(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new DialogTurnResult(DialogTurnStatus.Cancelled, 42));
+        }
+
         private class TestComponentDialog : ComponentDialog
         {
             public TestComponentDialog()
@@ -353,6 +392,16 @@ namespace Microsoft.Bot.Builder.Dialogs.Tests
                     steps));
                 AddDialog(new NumberPrompt<int>("number", defaultLocale: Culture.English));
                 AddDialog(new TestComponentDialog());
+            }
+        }
+
+        private class CancelledComponentDialog : ComponentDialog
+        {
+            public CancelledComponentDialog(Dialog waterfallDialog)
+                : base("TestComponentDialog")
+            {
+                AddDialog(waterfallDialog);
+                AddDialog(new NumberPrompt<int>("number", defaultLocale: Culture.English));
             }
         }
 

@@ -19,7 +19,7 @@ namespace Microsoft.Bot.Connector
         public const string Cortana = "cortana";
 
         /// <summary>
-        /// Direct Line channel
+        /// Direct Line channel.
         /// </summary>
         public const string Directline = "directline";
 
@@ -87,5 +87,10 @@ namespace Microsoft.Bot.Connector
         /// WebChat channel.
         /// </summary>
         public const string Webchat = "webchat";
+
+        /// <summary>
+        /// Test channel.
+        /// </summary>
+        public const string Test = "test";
     }
 }

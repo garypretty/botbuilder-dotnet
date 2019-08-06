@@ -35,7 +35,7 @@ namespace Microsoft.Bot.Builder.AI.Luis
             }
         }
 
-        internal static JObject ExtractEntitiesAndMetadata(IList<EntityModel> entities, IList<CompositeEntityModel> compositeEntities, bool verbose)
+        internal static JObject ExtractEntitiesAndMetadata(IList<EntityModel> entities, IList<CompositeEntityModel> compositeEntities, bool verbose, string utterance)
         {
             var entitiesAndMetadata = new JObject();
             if (verbose)
@@ -49,7 +49,7 @@ namespace Microsoft.Bot.Builder.AI.Luis
             if (compositeEntities != null && compositeEntities.Any())
             {
                 compositeEntityTypes = new HashSet<string>(compositeEntities.Select(ce => ce.ParentType));
-                entities = compositeEntities.Aggregate(entities, (current, compositeEntity) => PopulateCompositeEntityModel(compositeEntity, current, entitiesAndMetadata, verbose));
+                entities = compositeEntities.Aggregate(entities, (current, compositeEntity) => PopulateCompositeEntityModel(compositeEntity, current, entitiesAndMetadata, verbose, utterance));
             }
 
             foreach (var entity in entities)
@@ -64,7 +64,7 @@ namespace Microsoft.Bot.Builder.AI.Luis
 
                 if (verbose)
                 {
-                    AddProperty((JObject)entitiesAndMetadata[_metadataKey], ExtractNormalizedEntityName(entity), ExtractEntityMetadata(entity));
+                    AddProperty((JObject)entitiesAndMetadata[_metadataKey], ExtractNormalizedEntityName(entity), ExtractEntityMetadata(entity, utterance));
                 }
             }
 
@@ -85,14 +85,21 @@ namespace Microsoft.Bot.Builder.AI.Luis
 
         internal static JToken ExtractEntityValue(EntityModel entity)
         {
+            if (entity.Type.StartsWith("builtin.geographyV2."))
+            {
+                var subtype = entity.Type.Substring(20);
+                return new JObject(
+                    new JProperty("type", subtype),
+                    new JProperty("location", entity.Entity));
+            }
+
 #pragma warning disable IDE0007 // Use implicit type
-            if (entity.AdditionalProperties == null || !entity.AdditionalProperties.TryGetValue("resolution", out dynamic resolution))
+            else if (entity.AdditionalProperties == null || !entity.AdditionalProperties.TryGetValue("resolution", out dynamic resolution))
 #pragma warning restore IDE0007 // Use implicit type
             {
                 return entity.Entity;
             }
-
-            if (entity.Type.StartsWith("builtin.datetime."))
+            else if (entity.Type.StartsWith("builtin.datetime."))
             {
                 return JObject.FromObject(resolution);
             }
@@ -108,6 +115,12 @@ namespace Microsoft.Bot.Builder.AI.Luis
                 var timexes = resolutionValues.Select(val => val.timex);
                 var distinctTimexes = timexes.Distinct();
                 return new JObject(new JProperty("type", type), new JProperty("timex", JArray.FromObject(distinctTimexes)));
+            }
+            else if (entity.Type.StartsWith("builtin.ordinalV2"))
+            {
+                return new JObject(
+                    new JProperty("relativeTo", resolution.relativeTo),
+                    new JProperty("offset", Number(resolution.offset)));
             }
             else
             {
@@ -144,20 +157,23 @@ namespace Microsoft.Bot.Builder.AI.Luis
                         }
 
                     default:
-                        return resolution.value ?? JArray.FromObject(resolution.values);
+                        return resolution.value ?? (resolution.values != null ? JArray.FromObject(resolution.values) : resolution);
                 }
             }
         }
 
-        internal static JObject ExtractEntityMetadata(EntityModel entity)
+        internal static JObject ExtractEntityMetadata(EntityModel entity, string utterance)
         {
+            var start = (int)entity.StartIndex;
+            var end = (int)entity.EndIndex + 1;
             dynamic obj = JObject.FromObject(new
             {
-                startIndex = (int)entity.StartIndex,
-                endIndex = (int)entity.EndIndex + 1,
-                text = entity.Entity,
+                startIndex = start,
+                endIndex = end,
+                text = entity.Entity.Length == end - start ? entity.Entity : utterance.Substring(start, end - start),
                 type = entity.Type,
             });
+
             if (entity.AdditionalProperties != null)
             {
                 if (entity.AdditionalProperties.TryGetValue("score", out var score))
@@ -184,13 +200,19 @@ namespace Microsoft.Bot.Builder.AI.Luis
             {
                 type = "datetime";
             }
-
-            if (type.StartsWith("builtin.currency"))
+            else if (type.StartsWith("builtin.currency"))
             {
                 type = "money";
             }
-
-            if (type.StartsWith("builtin."))
+            else if (type.StartsWith("builtin.geographyV2"))
+            {
+                type = "geographyV2";
+            }
+            else if (type.StartsWith("builtin.ordinalV2"))
+            {
+                type = "ordinalV2";
+            }
+            else if (type.StartsWith("builtin."))
             {
                 type = type.Substring(8);
             }
@@ -204,7 +226,7 @@ namespace Microsoft.Bot.Builder.AI.Luis
             return type.Replace('.', '_').Replace(' ', '_');
         }
 
-        internal static IList<EntityModel> PopulateCompositeEntityModel(CompositeEntityModel compositeEntity, IList<EntityModel> entities, JObject entitiesAndMetadata, bool verbose)
+        internal static IList<EntityModel> PopulateCompositeEntityModel(CompositeEntityModel compositeEntity, IList<EntityModel> entities, JObject entitiesAndMetadata, bool verbose, string utterance)
         {
             var childrenEntites = new JObject();
             var childrenEntitiesMetadata = new JObject();
@@ -224,7 +246,7 @@ namespace Microsoft.Bot.Builder.AI.Luis
 
             if (verbose)
             {
-                childrenEntitiesMetadata = ExtractEntityMetadata(compositeEntityMetadata);
+                childrenEntitiesMetadata = ExtractEntityMetadata(compositeEntityMetadata, utterance);
                 childrenEntites[_metadataKey] = new JObject();
             }
 
@@ -240,7 +262,7 @@ namespace Microsoft.Bot.Builder.AI.Luis
                     }
 
                     // This entity doesn't belong to this composite entity
-                    if (child.Type != entity.Type || !CompositeContainsEntity(compositeEntityMetadata, entity))
+                    if (child.Type != entity.Type || !CompositeContainsEntity(compositeEntityMetadata, entity) || child.Value != entity.Entity)
                     {
                         continue;
                     }
@@ -251,8 +273,10 @@ namespace Microsoft.Bot.Builder.AI.Luis
 
                     if (verbose)
                     {
-                        AddProperty((JObject)childrenEntites[_metadataKey], ExtractNormalizedEntityName(entity), ExtractEntityMetadata(entity));
+                        AddProperty((JObject)childrenEntites[_metadataKey], ExtractNormalizedEntityName(entity), ExtractEntityMetadata(entity, utterance));
                     }
+
+                    break;
                 }
             }
 
@@ -273,15 +297,21 @@ namespace Microsoft.Bot.Builder.AI.Luis
         /// <summary>
         /// If a property doesn't exist add it to a new array, otherwise append it to the existing array.
         /// </summary>
+        /// <param name="obj">Object in which the property will be added.</param>
+        /// <param name="key">Key of the property.</param>
+        /// <param name="value">Value for the property.</param>
         internal static void AddProperty(JObject obj, string key, JToken value)
         {
-            if (((IDictionary<string, JToken>)obj).ContainsKey(key))
+            if (value != null)
             {
-                ((JArray)obj[key]).Add(value);
-            }
-            else
-            {
-                obj[key] = new JArray(value);
+                if (((IDictionary<string, JToken>)obj).ContainsKey(key))
+                {
+                    ((JArray)obj[key]).Add(value);
+                }
+                else
+                {
+                    obj[key] = new JArray(value);
+                }
             }
         }
 

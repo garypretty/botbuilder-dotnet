@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Integration;
@@ -54,6 +55,7 @@ namespace Microsoft.Bot.Builder
         private readonly RetryPolicy _connectorClientRetryPolicy;
         private readonly ILogger _logger;
         private readonly ConcurrentDictionary<string, MicrosoftAppCredentials> _appCredentialMap = new ConcurrentDictionary<string, MicrosoftAppCredentials>();
+        private readonly AuthenticationConfiguration _authConfiguration;
 
         // There is a significant boost in throughput if we reuse a connectorClient
         // _connectorClients is a cache using [serviceUrl + appId].
@@ -82,12 +84,42 @@ namespace Microsoft.Bot.Builder
             HttpClient customHttpClient = null,
             IMiddleware middleware = null,
             ILogger logger = null)
+            : this(credentialProvider, new AuthenticationConfiguration(), channelProvider, connectorClientRetryPolicy, customHttpClient, middleware, logger)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BotFrameworkAdapter"/> class,
+        /// using a credential provider.
+        /// </summary>
+        /// <param name="credentialProvider">The credential provider.</param>
+        /// <param name="authConfig">The authentication configuration.</param>
+        /// <param name="channelProvider">The channel provider.</param>
+        /// <param name="connectorClientRetryPolicy">Retry policy for retrying HTTP operations.</param>
+        /// <param name="customHttpClient">The HTTP client.</param>
+        /// <param name="middleware">The middleware to initially add to the adapter.</param>
+        /// <param name="logger">The ILogger implementation this adapter should use.</param>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="credentialProvider"/> is <c>null</c>.</exception>
+        /// <remarks>Use a <see cref="MiddlewareSet"/> object to add multiple middleware
+        /// components in the constructor. Use the <see cref="Use(IMiddleware)"/> method to
+        /// add additional middleware to the adapter after construction.
+        /// </remarks>
+        public BotFrameworkAdapter(
+            ICredentialProvider credentialProvider,
+            AuthenticationConfiguration authConfig,
+            IChannelProvider channelProvider = null,
+            RetryPolicy connectorClientRetryPolicy = null,
+            HttpClient customHttpClient = null,
+            IMiddleware middleware = null,
+            ILogger logger = null)
         {
             _credentialProvider = credentialProvider ?? throw new ArgumentNullException(nameof(credentialProvider));
             _channelProvider = channelProvider;
             _httpClient = customHttpClient ?? _defaultHttpClient;
             _connectorClientRetryPolicy = connectorClientRetryPolicy;
             _logger = logger ?? NullLogger.Instance;
+            _authConfiguration = authConfig ?? throw new ArgumentNullException(nameof(authConfig));
 
             if (middleware != null)
             {
@@ -96,7 +128,7 @@ namespace Microsoft.Bot.Builder
 
             // Relocate the tenantId field used by MS Teams to a new location (from channelData to conversation)
             // This will only occur on activities from teams that include tenant info in channelData but NOT in conversation,
-            // thus should be future friendly.  However, once the the transition is complete. we can remove this.
+            // thus should be future friendly.  However, once the transition is complete. we can remove this.
             Use(new TenantIdWorkaroundForTeamsMiddleware());
 
             // DefaultRequestHeaders are not thread safe so set them up here because this adapter should be a singleton.
@@ -211,7 +243,7 @@ namespace Microsoft.Bot.Builder
         {
             BotAssert.ActivityNotNull(activity);
 
-            var claimsIdentity = await JwtTokenValidation.AuthenticateRequest(activity, authHeader, _credentialProvider, _channelProvider, _httpClient).ConfigureAwait(false);
+            var claimsIdentity = await JwtTokenValidation.AuthenticateRequest(activity, authHeader, _credentialProvider, _channelProvider, _authConfiguration, _httpClient).ConfigureAwait(false);
             return await ProcessActivityAsync(claimsIdentity, activity, callback, cancellationToken).ConfigureAwait(false);
         }
 
